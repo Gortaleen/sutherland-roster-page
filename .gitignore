@@ -9,3 +9,5 @@ node_modules/
 
 # TypeScript output
 dist/
+
+.clasp.json
