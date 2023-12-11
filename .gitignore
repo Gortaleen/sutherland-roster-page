@@ -6,3 +6,6 @@ node_modules/
 
 # Optional stylelint cache
 .stylelintcache
+
+# TypeScript output
+dist/

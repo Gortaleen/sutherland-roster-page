@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "lib": ["esnext"],
+    "experimentalDecorators": true,
+    "outDir": "dist",
+    "skipLibCheck": true,
+    "strict": true,
+    "alwaysStrict": true
+  },
+  "exclude": ["node_modules", "**/node_modules/*"]
+}
