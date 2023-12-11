@@ -65,7 +65,7 @@ const RosterUpdate = (function () {
       .filter(function (contact) {
         const name = contact.person!.resourceName;
 
-        Object.getOwnPropertyDescriptor(activeResourceNames, name!);
+        return Object.getOwnPropertyDescriptor(activeResourceNames, name!);
       })
       .map(function (contact) {
         return [
