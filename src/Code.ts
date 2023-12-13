@@ -322,7 +322,7 @@ const RosterUpdate = (function () {
     // https://developers.google.com/apps-script/reference/document/document
     const body = doc.getBody();
     let rangeElement;
-    const style = {};
+    const style = { BOLD: true, FONT_SIZE: 12 };
 
     // clear doc
     while (body.getNumChildren() > 1) body.removeChild(body.getChild(0));
@@ -332,12 +332,6 @@ const RosterUpdate = (function () {
     body.editAsText().appendText("\n\n");
     addContactsToDoc("Piper", pipers, body);
     addContactsToDoc("Drummer", drummers, body);
-
-    // document formatting
-    Object.defineProperty(style, DocumentApp.Attribute.BOLD, { value: true });
-    Object.defineProperty(style, DocumentApp.Attribute.FONT_SIZE, {
-      value: 12,
-    });
 
     rangeElement = body.findText("Officers");
     rangeElement.getElement().setAttributes(style);
