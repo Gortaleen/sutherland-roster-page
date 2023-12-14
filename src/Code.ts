@@ -202,50 +202,34 @@ const RosterUpdate = (function () {
     return [drummers, pipers];
   }
 
+  function addOneOfficerToDoc(
+    body: GoogleAppsScript.Document.Body,
+    title: string,
+    name: string
+  ) {
+    body
+      .appendListItem(title + ": " + (name ? name : "vacant") + "\n")
+      .setGlyphType(DocumentApp.GlyphType.BULLET);
+
+    return;
+  }
+
   function addOfficersToDoc(
     body: GoogleAppsScript.Document.Body,
     officers: Officers
   ) {
+    const ds = <string>(
+      Object.getOwnPropertyDescriptor(officers, "drum.sergeant")
+    );
+
     // Add officer names to doc
     body.editAsText().appendText("Officers\n");
-    body
-      .appendListItem(
-        "Pipe Major: " + (officers!.pm ? officers!.pm : "vacant") + "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Drum Sergeant: " +
-          (officers["drum.sergeant"] ? officers["drum.sergeant"] : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Manager: " + (officers.manager ? officers.manager : "vacant") + "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Secretary: " +
-          (officers.secretary ? officers.secretary : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Treasurer: " +
-          (officers.treasurer ? officers.treasurer : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Quartermaster: " +
-          (officers.quartermaster ? officers.quartermaster : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
+    addOneOfficerToDoc(body, "Pipe Major", officers.pm);
+    addOneOfficerToDoc(body, "Drum Sergeant", ds);
+    addOneOfficerToDoc(body, "Manager", officers.manager);
+    addOneOfficerToDoc(body, "Secretary", officers.secretary);
+    addOneOfficerToDoc(body, "Treasurer", officers.treasurer);
+    addOneOfficerToDoc(body, "Quartermaster", officers.quartermaster);
 
     return;
   }
@@ -263,14 +247,13 @@ const RosterUpdate = (function () {
     });
 
     body.editAsText().appendText(contactType + "s\n");
-
     contactArr.sort();
     contactArr.forEach((contact) =>
       body
         .appendListItem([contact[1]] + "\n")
         .setGlyphType(DocumentApp.GlyphType.BULLET)
     );
-    body.editAsText().appendText("\n\n");
+    insertBlankRow(body);
 
     return;
   }
@@ -306,6 +289,12 @@ const RosterUpdate = (function () {
     return lastAlteredDt > lastUpdatedByScriptDt;
   }
 
+  function insertBlankRow(body: GoogleAppsScript.Document.Body) {
+    body.editAsText().appendText("\n\n");
+
+    return;
+  }
+
   function main(forceUpdate = false) {
     const quotaUser = Session.getActiveUser().getEmail();
     const customerId = getCustomerId(quotaUser);
@@ -328,8 +317,9 @@ const RosterUpdate = (function () {
     while (body.getNumChildren() > 1) body.removeChild(body.getChild(0));
     body.clear();
 
+    // add data to doc
     addOfficersToDoc(body, officers);
-    body.editAsText().appendText("\n\n");
+    insertBlankRow(body);
     addContactsToDoc("Piper", pipers, body);
     addContactsToDoc("Drummer", drummers, body);
 
@@ -341,6 +331,7 @@ const RosterUpdate = (function () {
     rangeElement = body.findText("Drummers");
     rangeElement.getElement().setAttributes(style);
     body.setMarginTop(0);
+
     scriptProperties.setProperty("LAST_UPDATED", new Date().toISOString());
 
     return;
