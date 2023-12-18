@@ -34,6 +34,16 @@ interface Officers extends GoogleAppsScript.AdminDirectory.Schema.Users {
   treasurer: string;
 }
 
+interface RosterProperties {
+  DOCUMENT_ID: string;
+  RESOURCE_NAME_PIPER: string;
+  RESOURCE_NAME_DRUMMER: string;
+  CONNECTIONS_SYNC_TOKEN: string;
+  LAST_UPDATED: string;
+  RESOURCE_NAME_ACTIVE: string;
+  [key: string]: string;
+}
+
 const RosterUpdate = (function () {
   function getOfficers(customerId: string): Officers {
     if (!AdminDirectory.Users) {
@@ -72,13 +82,11 @@ const RosterUpdate = (function () {
   }
 
   function checkContactsChanged(
-    scriptProperties: GoogleAppsScript.Properties.Properties,
+    rosterScriptProperties: RosterProperties,
     quotaUser: string
   ) {
     // first check to see if any contacts have been added or deleted
-    const connectionsSyncToken = scriptProperties.getProperty(
-      "CONNECTIONS_SYNC_TOKEN"
-    );
+    const connectionsSyncToken = rosterScriptProperties.CONNECTIONS_SYNC_TOKEN;
     let listConnectionsResponse: ListConnectionsResponse | undefined;
 
     try {
@@ -119,10 +127,8 @@ const RosterUpdate = (function () {
       throw "People.Connections.List not available";
     }
     if (listConnectionsResponse?.nextSyncToken) {
-      scriptProperties.setProperty(
-        "CONNECTIONS_SYNC_TOKEN",
-        listConnectionsResponse.nextSyncToken || ""
-      );
+      rosterScriptProperties.CONNECTIONS_SYNC_TOKEN =
+        listConnectionsResponse.nextSyncToken;
     }
 
     /*
@@ -133,7 +139,7 @@ const RosterUpdate = (function () {
   }
 
   function getBandMembers(
-    scriptProperties: GoogleAppsScript.Properties.Properties,
+    rosterScriptProperties: RosterProperties,
     quotaUser: string
   ) {
     if (!People.ContactGroups) {
@@ -143,15 +149,9 @@ const RosterUpdate = (function () {
     const maxMembers = listContactsGroupResponse.contactGroups?.find(
       (contactGroup) => contactGroup.name === "myContacts"
     )?.memberCount;
-    const activeResourceName = scriptProperties.getProperty(
-      "RESOURCE_NAME_ACTIVE"
-    );
-    const drummerResourceName = scriptProperties.getProperty(
-      "RESOURCE_NAME_DRUMMER"
-    );
-    const piperResourceName = scriptProperties.getProperty(
-      "RESOURCE_NAME_PIPER"
-    );
+    const activeResourceName = rosterScriptProperties.RESOURCE_NAME_ACTIVE;
+    const drummerResourceName = rosterScriptProperties.RESOURCE_NAME_DRUMMER;
+    const piperResourceName = rosterScriptProperties.RESOURCE_NAME_PIPER;
     // https://developers.google.com/people/api/rest/v1/contactGroups/batchGet
     const batchGetContactGroupsResponse = People.ContactGroups.batchGet({
       maxMembers,
@@ -202,50 +202,34 @@ const RosterUpdate = (function () {
     return [drummers, pipers];
   }
 
+  function addOneOfficerToDoc(
+    body: GoogleAppsScript.Document.Body,
+    title: string,
+    name: string
+  ) {
+    body
+      .appendListItem(title + ": " + (name ? name : "vacant") + "\n")
+      .setGlyphType(DocumentApp.GlyphType.BULLET);
+
+    return;
+  }
+
   function addOfficersToDoc(
     body: GoogleAppsScript.Document.Body,
     officers: Officers
   ) {
+    const ds = <string>(
+      Object.getOwnPropertyDescriptor(officers, "drum.sergeant")
+    );
+
     // Add officer names to doc
     body.editAsText().appendText("Officers\n");
-    body
-      .appendListItem(
-        "Pipe Major: " + (officers!.pm ? officers!.pm : "vacant") + "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Drum Sergeant: " +
-          (officers["drum.sergeant"] ? officers["drum.sergeant"] : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Manager: " + (officers.manager ? officers.manager : "vacant") + "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Secretary: " +
-          (officers.secretary ? officers.secretary : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Treasurer: " +
-          (officers.treasurer ? officers.treasurer : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
-    body
-      .appendListItem(
-        "Quartermaster: " +
-          (officers.quartermaster ? officers.quartermaster : "vacant") +
-          "\n"
-      )
-      .setGlyphType(DocumentApp.GlyphType.BULLET);
+    addOneOfficerToDoc(body, "Pipe Major", officers.pm);
+    addOneOfficerToDoc(body, "Drum Sergeant", ds);
+    addOneOfficerToDoc(body, "Manager", officers.manager);
+    addOneOfficerToDoc(body, "Secretary", officers.secretary);
+    addOneOfficerToDoc(body, "Treasurer", officers.treasurer);
+    addOneOfficerToDoc(body, "Quartermaster", officers.quartermaster);
 
     return;
   }
@@ -270,7 +254,7 @@ const RosterUpdate = (function () {
         .appendListItem([contact[1]] + "\n")
         .setGlyphType(DocumentApp.GlyphType.BULLET)
     );
-    body.editAsText().appendText("\n\n");
+    insertBlankRow(body);
 
     return;
   }
@@ -282,7 +266,7 @@ const RosterUpdate = (function () {
    */
   function checkDocAltered(
     doc: GoogleAppsScript.Document.Document,
-    scriptProperties: GoogleAppsScript.Properties.Properties
+    rosterScriptProperties: RosterProperties
   ) {
     const queryDriveActivityResponse = DriveActivity.Activity?.query({
       pageSize: 1,
@@ -291,8 +275,7 @@ const RosterUpdate = (function () {
     if (!queryDriveActivityResponse) {
       throw "DriveActivity.Activity not available";
     }
-    const lastUpdatedByScriptStr =
-      scriptProperties.getProperty("LAST_UPDATED") || "";
+    const lastUpdatedByScriptStr = rosterScriptProperties.LAST_UPDATED;
     if (!lastUpdatedByScriptStr) {
       return true;
     }
@@ -306,19 +289,32 @@ const RosterUpdate = (function () {
     return lastAlteredDt > lastUpdatedByScriptDt;
   }
 
+  function insertBlankRow(body: GoogleAppsScript.Document.Body) {
+    body.editAsText().appendText("\n\n");
+
+    return;
+  }
+
   function main(forceUpdate = false) {
     const quotaUser = Session.getActiveUser().getEmail();
     const customerId = getCustomerId(quotaUser);
-    const scriptProperties = PropertiesService.getScriptProperties();
-    const contactsChanged = checkContactsChanged(scriptProperties, quotaUser);
-    const doc = DocumentApp.getActiveDocument();
-    const docAltered = checkDocAltered(doc, scriptProperties);
+    const rosterScriptProperties =
+      PropertiesService.getScriptProperties().getProperties() as RosterProperties;
+    const contactsChanged = checkContactsChanged(
+      rosterScriptProperties,
+      quotaUser
+    );
+    const doc = DocumentApp.openById(rosterScriptProperties.DOCUMENT_ID);
+    const docAltered = checkDocAltered(doc, rosterScriptProperties);
     if (!contactsChanged && !forceUpdate && !docAltered) {
       // this assumes changes to Contacts will be made when changes are made to Officers.
       return;
     }
     const officers = getOfficers(customerId);
-    const [drummers, pipers] = getBandMembers(scriptProperties, quotaUser);
+    const [drummers, pipers] = getBandMembers(
+      rosterScriptProperties,
+      quotaUser
+    );
     // https://developers.google.com/apps-script/reference/document/document
     const body = doc.getBody();
     let rangeElement;
@@ -328,8 +324,9 @@ const RosterUpdate = (function () {
     while (body.getNumChildren() > 1) body.removeChild(body.getChild(0));
     body.clear();
 
+    // add data to doc
     addOfficersToDoc(body, officers);
-    body.editAsText().appendText("\n\n");
+    insertBlankRow(body);
     addContactsToDoc("Piper", pipers, body);
     addContactsToDoc("Drummer", drummers, body);
 
@@ -341,7 +338,8 @@ const RosterUpdate = (function () {
     rangeElement = body.findText("Drummers");
     rangeElement.getElement().setAttributes(style);
     body.setMarginTop(0);
-    scriptProperties.setProperty("LAST_UPDATED", new Date().toISOString());
+
+    rosterScriptProperties.LAST_UPDATED = new Date().toISOString();
 
     return;
   }
