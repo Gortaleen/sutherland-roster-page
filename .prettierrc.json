@@ -8,15 +8,6 @@
         "useTabs": false,
         "singleQuote": false
       }
-    },
-    {
-      "files": [
-        "*.html",
-        "legacy/**/*.js"
-      ],
-      "options": {
-        "tabWidth": 4
-      }
     }
   ]
 }

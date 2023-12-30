@@ -34,14 +34,18 @@ interface Officers extends GoogleAppsScript.AdminDirectory.Schema.Users {
   treasurer: string;
 }
 
-interface RosterProperties {
+// https://www.typescriptlang.org/docs/handbook/2/objects.html#index-signatures
+interface StringArray {
+  [key: string]: string;
+}
+
+interface RosterProperties extends StringArray {
   DOCUMENT_ID: string;
   RESOURCE_NAME_PIPER: string;
   RESOURCE_NAME_DRUMMER: string;
   CONNECTIONS_SYNC_TOKEN: string;
   LAST_UPDATED: string;
   RESOURCE_NAME_ACTIVE: string;
-  [key: string]: string;
 }
 
 const RosterUpdate = (function () {
@@ -127,8 +131,10 @@ const RosterUpdate = (function () {
       throw "People.Connections.List not available";
     }
     if (listConnectionsResponse?.nextSyncToken) {
-      rosterScriptProperties.CONNECTIONS_SYNC_TOKEN =
-        listConnectionsResponse.nextSyncToken;
+      PropertiesService.getScriptProperties().setProperty(
+        "CONNECTIONS_SYNC_TOKEN",
+        listConnectionsResponse.nextSyncToken
+      );
     }
 
     /*
@@ -339,7 +345,10 @@ const RosterUpdate = (function () {
     rangeElement.getElement().setAttributes(style);
     body.setMarginTop(0);
 
-    rosterScriptProperties.LAST_UPDATED = new Date().toISOString();
+    PropertiesService.getScriptProperties().setProperty(
+      "LAST_UPDATED",
+      new Date().toISOString()
+    );
 
     return;
   }
