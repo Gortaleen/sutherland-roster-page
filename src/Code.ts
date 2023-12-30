@@ -35,11 +35,8 @@ interface Officers extends GoogleAppsScript.AdminDirectory.Schema.Users {
 }
 
 // https://www.typescriptlang.org/docs/handbook/2/objects.html#index-signatures
-interface StringArray {
+interface RosterProperties {
   [key: string]: string;
-}
-
-interface RosterProperties extends StringArray {
   DOCUMENT_ID: string;
   RESOURCE_NAME_PIPER: string;
   RESOURCE_NAME_DRUMMER: string;
